@@ -60,8 +60,11 @@
  */
 #define FUDGEFAC	.1	/* fudge correction factor */
 #define LF		0x0a	/* ASCII LF */
+#define MeasurementRate	5 /* joo */
 
 int	cal_enable;		/* enable refclock calibrate */
+size_t index_t = 0; /* joo */
+double offset_array[Measuer
 
 /*
  * Forward declarations
@@ -376,6 +379,29 @@ refclock_process_offset(
 	lftemp = lasttim;
 	L_SUB(&lftemp, &lastrec);
 	LFPTOD(&lftemp, doffset);
+	
+	//joo
+	if(fabs(doffset) > 1){
+		SAMPLE(doffset + fudge);
+	}else{
+	offset_array[index_t] = doffset;
+	index_t++;
+	if (index_t == MeasurementRate) {
+		for (int i = 0; i < MeasurementRate; i++){
+			off[i] = fabs(offset_array[i]);
+		}
+		qsort(off, MeasurementRate, sizeof(off[0]), refclock_cmpl_fp);
+		output = off[0];
+		
+		for (int j = 0; j < MeasurementRate; j++){
+			if(fabs(offset_array[j]) == output){
+				output = offset_array[j];
+				break;
+			}
+		}
+		SAMPLE(doffset + fudge);
+		index_t = 0;
+	
 	SAMPLE(doffset + fudge);
 }
 
